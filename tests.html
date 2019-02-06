@@ -14,14 +14,14 @@
             function appendSuccess(cmd, expected) {
                 const successContainer = document.getElementById("success");
                 let message = cmd + " = " + expected;
-                successContainer.appendChild(document.createTextNode(message));
                 successContainer.appendChild(document.createElement("br"));
+                successContainer.appendChild(document.createTextNode(message));
             }
             function appendFailure(cmd, expected, result) {
                 const failContainer = document.getElementById("fail");
                 let message = cmd + " = " + result + " not " + expected;
-                failContainer.appendChild(document.createTextNode(message));
                 failContainer.appendChild(document.createElement("br"));
+                failContainer.appendChild(document.createTextNode(message));
             }
             function test(cmd, expected) {
                 let cmdString = asString(cmd);
@@ -44,9 +44,8 @@
         </script>
     </head>
     <body>
-        <div><b>Failed tests:</b></div><br />
-        <div id="fail"></div><br />
-        <div><b>Successful tests:</b></div><br />
-        <div id="success"></div>
+        <div id="fail"><b>Failed tests:</b></div>
+        <br />
+        <div id="success"><b>Successful tests:</b></div>
     </body>
 </html>
