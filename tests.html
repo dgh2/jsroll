@@ -27,7 +27,7 @@
                 let cmdString = asString(cmd);
                 let expectedString = asString(expected);
                 let resultString = asString(parser.process(cmdString));
-                if (result === expectedString) {
+                if (resultString === expectedString) {
                     appendSuccess(cmdString, expectedString);
                 } else {
                     appendFailure(cmdString, expectedString, resultString);
