@@ -247,14 +247,14 @@ class ShuntingYard {
                     	if (operands.length) {
                             parameters[parameters.length-1].push(operands.pop());
                         }
-                        alert("Calling " + postfix[i].token + " with parameters (" + JSON.stringify(parameters[parameters.length-1]) + ")");
+                        //alert("Calling " + postfix[i].token + " with parameters (" + JSON.stringify(parameters[parameters.length-1]) + ")");
                         operands.push(postfix[i].operation(...parameters.pop()));
                     } else {
                         if (operands.length < postfix[i].arity) {
                             throw new Error("Too few operands passed to " + postfix[i].token);
                         }
                         let operandList = operands.splice(-postfix[i].arity);
-                        alert("Calling " + postfix[i].operation.name + " with operands (" + JSON.stringify(operandList.join(",")) + ")");
+                        //alert("Calling " + postfix[i].operation.name + " with operands (" + JSON.stringify(operandList.join(",")) + ")");
                         operands.push(postfix[i].operation(...operandList));
                     }
                 } else {
