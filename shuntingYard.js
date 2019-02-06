@@ -129,6 +129,7 @@ class ShuntingYard {
         }
         tokens = tokens.map(token => token.trim()); //remove spaces before and after each token
         tokens = tokens.filter(token => token !== ''); //remove all empty tokens left by removing spaces
+        tokens = tokens.map(token => isNaN(Number(token)) ? token : Number(token)); //convert numeric strings to numbers
         return tokens;
     }
 
