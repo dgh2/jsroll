@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+    <head>
+        <script type="text/javascript" src="shuntingYard.js"></script>
+        <script type="text/javascript">
+            function asString() {
+                let argument = arguments[0];
+                if (Array.isArray(argument)) {
+                    return "[" + argument.map(asString).join(",") + "]";
+                }
+                return String(argument);
+            }
+            const parser = new ShuntingYard();
+            const successContainer = document.getElementById("success");
+            const failContainer = document.getElementById("fail");
+            function appendSuccess(cmd, expected) {
+                let message = cmd + " = " + expected;
+                successContainer.appendChild(document.createTextNode(message));
+                successContainer.appendChild(document.createElement("br"));
+            }
+            function appendFailure(cmd, expected, result) {
+                let message = cmd + " = " + result + " not " + expected;
+                failContainer.appendChild(document.createTextNode(message));
+                failContainer.appendChild(document.createElement("br"));
+            }
+            test(cmd, expected) {
+                let cmdString = asString(cmd);
+                let expectedString = asString(expected);
+                let resultString = asString(parser.process(cmdString));
+                if (result === expectedString) {
+                    appendSuccess(cmdString, expectedString);
+                } else {
+                    appendFailure(cmdString, expectedString, resultString);
+                }
+            }
+            test(2,2);
+            test(-2,-2);
+            test(PI, 3.14);
+            test(-PI, -3.14);
+            test((), "");
+            test([], []);
+        </script>
+    </head>
+    <body>
+        <div><b>Failed tests:</b></div><br />
+        <div id="fail"></div><br />
+        <div><b>Successful tests:</b></div><br />
+        <div id="success"></div>
+    </body>
+</html>
