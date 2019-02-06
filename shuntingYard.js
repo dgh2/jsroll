@@ -341,12 +341,12 @@ class ShuntingYard {
             } else {
                 let difference = [];
                 for (let i = 0; i < minuend.length || i < subtrahend.length; i++) {
-                    difference.push(this.plus((minuend[i] ? minuend[i] : 0), (subtrahend[i] ? subtrahend[i] : 0)));
+                    difference.push(this.minus((minuend[i] ? minuend[i] : 0), (subtrahend[i] ? subtrahend[i] : 0)));
                 }
                 return difference;
             }
         }
-        return minuend + subtrahend;
+        return minuend - subtrahend;
     }
 
     static multiply(multiplier, multiplicand) {
