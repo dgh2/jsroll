@@ -11,14 +11,14 @@
                 return String(argument);
             }
             const parser = new ShuntingYard();
-            const successContainer = document.getElementById("success");
-            const failContainer = document.getElementById("fail");
             function appendSuccess(cmd, expected) {
+                const successContainer = document.getElementById("success");
                 let message = cmd + " = " + expected;
                 successContainer.appendChild(document.createTextNode(message));
                 successContainer.appendChild(document.createElement("br"));
             }
             function appendFailure(cmd, expected, result) {
+                const failContainer = document.getElementById("fail");
                 let message = cmd + " = " + result + " not " + expected;
                 failContainer.appendChild(document.createTextNode(message));
                 failContainer.appendChild(document.createElement("br"));
