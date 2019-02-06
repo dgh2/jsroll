@@ -23,7 +23,7 @@
                 failContainer.appendChild(document.createTextNode(message));
                 failContainer.appendChild(document.createElement("br"));
             }
-            test(cmd, expected) {
+            function test(cmd, expected) {
                 let cmdString = asString(cmd);
                 let expectedString = asString(expected);
                 let resultString = asString(parser.process(cmdString));
