@@ -33,12 +33,14 @@
                     appendFailure(cmdString, expectedString, resultString);
                 }
             }
-            test("2","2");
-            test("-2","-2");
-            test("PI", "3.14");
-            test("-PI", "-3.14");
-            test("()", "");
-            test("[]", "[]");
+            window.onload = function() {
+                test("2","2");
+                test("-2","-2");
+                test("PI", "3.14");
+                test("-PI", "-3.14");
+                test("()", "");
+                test("[]", "[]");
+            }
         </script>
     </head>
     <body>
