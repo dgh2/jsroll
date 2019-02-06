@@ -1,7 +1,7 @@
 //http://reedbeta.com/blog/the-shunting-yard-algorithm/#how-it-works
 //https://math.stackexchange.com/questions/975541/what-are-the-formal-names-of-operands-and-results-for-basic-operations
 
-//https://jsfiddle.net/t6Lodhu9/
+//https://jsfiddle.net/mkxn42ja/
 
 /*
 function isNumeric(n) {
@@ -164,8 +164,10 @@ class ShuntingYard {
             const operator = this.getOperator(token, expectUnary);
             if (token === "(") {
                 operatorStack.push(token);
+                postfix.push(token);
             } else if (token === "[") {
                 operatorStack.push(token);
+                postfix.push(token);
             } else if (token === ")") {
                 while (operatorStack.length && operatorStack[operatorStack.length-1] !== "(") {
                     postfix.push(operatorStack.pop());
@@ -177,6 +179,7 @@ class ShuntingYard {
                 if (operatorStack.length && typeof operatorStack[operatorStack.length-1].arity === 'undefined') {
                 	postfix.push(operatorStack.pop());
                 }
+                postfix.push(token);
             } else if (token === "]") {
                 while (operatorStack.length && operatorStack[operatorStack.length-1] !== "[") {
                     postfix.push(operatorStack.pop());
@@ -209,12 +212,6 @@ class ShuntingYard {
         while (operatorStack.length) {
             postfix.push(operatorStack.pop());
         }
-        if (postfix.includes("(")) {
-            throw new Error("Mismatched grouping operator: (")
-        }
-        if (postfix.includes("[")) {
-            throw new Error("Mismatched grouping operator: [")
-        }
         return postfix;
     }
 
@@ -225,47 +222,53 @@ class ShuntingYard {
             return "";
         }
         let parameters = [];
+        let arrays = [];
         let operands = [];
         for (let i = 0; i < postfix.length; i++) {
             if (postfix[i] === ",") {
-            	//alert("Moving operand " + operands[operands.length-1] + " to parameters");
-                parameters.push(operands.pop());
+                parameters[parameters.length-1].push(operands.pop());
+            } else if (postfix[i] === "(") {
+            	parameters.push([]);
+            } else if (postfix[i] === ")") {
+            	if (operands.length) {
+                	parameters[parameters.length-1].push(operands.pop());
+                }
+            	operands.push(parameters.pop());
+            } else if (postfix[i] === "[") {
+            	arrays.push([]);
             } else if (postfix[i] === "]") {
-                parameters.push(operands.pop());
-            	operands.push(parameters);
-                parameters = [];
+            	if (operands.length) {
+                	arrays[arrays.length-1].push(operands.pop());
+                }
+            	operands.push(arrays.pop());
             } else if (postfix[i] instanceof Operator) {
             	if (postfix[i].arity !== 0) {
                     if (typeof postfix[i].arity === 'undefined') {
-                        //alert("Moving operand " + operands[operands.length-1] + " to parameters");
-                        parameters.push(operands.pop());
-                        //alert("Calling " + postfix[i].token + " with parameters (" + parameters.join(",") + ")");
-                        operands.push(postfix[i].operation(...parameters));
-                        parameters = [];
+                    	if (operands.length) {
+                            parameters[parameters.length-1].push(operands.pop());
+                        }
+                        alert("Calling " + postfix[i].token + " with parameters (" + JSON.stringify(parameters[parameters.length-1]) + ")");
+                        operands.push(postfix[i].operation(...parameters.pop()));
                     } else {
                         if (operands.length < postfix[i].arity) {
-                        	//alert("Expected " + postfix[i].arity + " operands, got " + operands.length);
                             throw new Error("Too few operands passed to " + postfix[i].token);
                         }
-                        let operandList = [];
-                        for (let j = 0; j < postfix[i].arity; j++) {
-                            //alert("Changing operand " + operands[operands.length-1] + " to parameter");
-                            operandList.push(operands.pop());
-                        }
-                        //alert("Calling " + postfix[i].operation.name + " with operands (" + operandList.join(",") + ")");
+                        let operandList = operands.splice(-postfix[i].arity);
+                        alert("Calling " + postfix[i].operation.name + " with operands (" + JSON.stringify(operandList.join(",")) + ")");
                         operands.push(postfix[i].operation(...operandList));
                     }
                 } else {
-                	//alert("Pushing result of " + postfix[i].operation.name);
                 	operands.push(postfix[i].operation());
                 }
             } else {
-                //alert("Pushing operand: " + postfix[i]);
                 operands.push(postfix[i]);
             }
         }
+        if (arrays.length) {
+            throw new Error("Mismatched grouping operator: [")
+        }
         if (parameters.length) {
-            throw new Error("Missing function call for parameters: (" + parameters.join(",") + ")");
+            throw new Error("Mismatched grouping operator: (")
         }
         if (operands.length > 1) {
             throw new Error("Too few operators provided! Remaining operands: " + operands.join(","));
