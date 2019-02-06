@@ -318,11 +318,11 @@ class ShuntingYard {
         //[1,2,3] + [4,5,6,7,8,9] = ([1,2,3,0,0,0] + [4,5,6,7,8,9]) = [5,7,9,7,8,9]
         if (Array.isArray(augend)) {
             if (!Array.isArray(addend)) {
-                return augend.map(value => this.plus(value, addend));
+                return augend.map(value => ShuntingYard.plus(value, addend));
             } else {
                 let sum = [];
                 for (let i = 0; i < augend.length || i < addend.length; i++) {
-                    sum.push(this.plus((augend[i] ? augend[i] : 0), (addend[i] ? addend[i] : 0)));
+                    sum.push(ShuntingYard.plus((augend[i] ? augend[i] : 0), (addend[i] ? addend[i] : 0)));
                 }
                 return sum;
             }
@@ -337,11 +337,11 @@ class ShuntingYard {
         //[5,7,9,7,8,9] - [4,5,6,7,8,9] = [1,2,3,0,0,0]
         if (Array.isArray(minuend)) {
             if (!Array.isArray(subtrahend)) {
-                return minuend.map(value => this.plus(value, subtrahend));
+                return minuend.map(value => ShuntingYard.minus(value, subtrahend));
             } else {
                 let difference = [];
                 for (let i = 0; i < minuend.length || i < subtrahend.length; i++) {
-                    difference.push(this.minus((minuend[i] ? minuend[i] : 0), (subtrahend[i] ? subtrahend[i] : 0)));
+                    difference.push(ShuntingYard.minus((minuend[i] ? minuend[i] : 0), (subtrahend[i] ? subtrahend[i] : 0)));
                 }
                 return difference;
             }
@@ -352,11 +352,11 @@ class ShuntingYard {
     static multiply(multiplier, multiplicand) {
         if (Array.isArray(multiplier)) {
             if (!Array.isArray(multiplicand)) {
-                return multiplier.map(value => this.plus(value, multiplicand));
+                return multiplier.map(value => ShuntingYard.multiply(value, multiplicand));
             } else {
                 let product = [];
                 for (let i = 0; i < multiplier.length || i < multiplicand.length; i++) {
-                    product.push(this.multiply((multiplier[i] ? multiplier[i] : 0), (multiplicand[i] ? multiplicand[i] : 0)));
+                    product.push(ShuntingYard.multiply((multiplier[i] ? multiplier[i] : 0), (multiplicand[i] ? multiplicand[i] : 0)));
                 }
                 return product;
             }
@@ -367,11 +367,11 @@ class ShuntingYard {
     static divide(dividend, divisor) {
         if (Array.isArray(dividend)) {
             if (!Array.isArray(divisor)) {
-                return dividend.map(value => this.plus(value, divisor));
+                return dividend.map(value => ShuntingYard.divide(value, divisor));
             } else {
                 let quotient = [];
                 for (let i = 0; i < dividend.length || i < divisor.length; i++) {
-                    quotient.push(this.multiply((dividend[i] ? dividend[i] : 0), (divisor[i] ? divisor[i] : 0)));
+                    quotient.push(ShuntingYard.divide((dividend[i] ? dividend[i] : 0), (divisor[i] ? divisor[i] : 0)));
                 }
                 return quotient;
             }
@@ -393,11 +393,11 @@ class ShuntingYard {
         if (Array.isArray(operand)) {
             return operand.map(ShuntingYard.factorial);
         }
-        if (operand === 0 || operand === 1) {
-            return operand;
-        }
         if (operand < 0) {
             return undefined;
+        }
+        if (operand <= 1) {
+            return 1;
         }
         return ShuntingYard.multiply(operand, ShuntingYard.factorial(operand - 1));
     }
