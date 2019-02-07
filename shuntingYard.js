@@ -1,13 +1,12 @@
-//http://reedbeta.com/blog/the-shunting-yard-algorithm/#how-it-works
-//https://math.stackexchange.com/questions/975541/what-are-the-formal-names-of-operands-and-results-for-basic-operations
-
-//https://jsfiddle.net/mkxn42ja/
-
-/*
-function isNumeric(n) {
-    return !isNaN(parseFloat(n)) && isFinite(n);
+function asString(argument) {
+	let string = "";
+    if (Array.isArray(argument)) {
+        string += "[" + argument.map(asString).join(",") + "]";
+    } else {
+    	string += "" + argument;
+    }
+    return string;
 }
-*/
 
 class Operator {
     constructor(token, precedence, arity, fix, operation, rightAssociative = false) {
@@ -89,12 +88,19 @@ class ShuntingYard {
         operators.push(Operator.createUnaryPostfixOperator("%", ShuntingYard.percent));
         operators.push(Operator.createFunctionOperator("MAX", Math.max));
         operators.push(Operator.createFunctionOperator("MIN", Math.min));
+        operators.push(Operator.createFunctionOperator("SUM", ShuntingYard.sum));
+        operators.push(Operator.createBinaryOperator("<", 3, ShuntingYard.lt));
+        operators.push(Operator.createBinaryOperator("<=", 3, ShuntingYard.lte));
+        operators.push(Operator.createBinaryOperator(">", 3, ShuntingYard.gt));
+        operators.push(Operator.createBinaryOperator(">=", 3, ShuntingYard.gte));
+        operators.push(Operator.createBinaryOperator("=", 3, ShuntingYard.eq));
+        operators.push(Operator.createBinaryOperator("==", 3, ShuntingYard.eq));
         operators.push(Operator.createUnaryPrefixOperator("d", ShuntingYard.unaryDiceRoll, true));
         operators.push(Operator.createBinaryOperator("d", 2, ShuntingYard.diceRoll, true));
-        operators.push(Operator.createFunctionOperator("Σ", ShuntingYard.sum));
 
         //test operations
         operators.push(Operator.createBinaryOperator("!", 3, ShuntingYard.append));
+        operators.push(Operator.createFunctionOperator("Σ", ShuntingYard.sum));
 
         //sort by longest tokens first, so operators can be added in any order
         operators.sort(Operator.compareLength);
@@ -158,16 +164,17 @@ class ShuntingYard {
         const unaryPrefixes = [null,"(","[",","].concat(this.operators.filter(op => op.precedence !== 0).map(op => op.token));
         let postfix = [];
         let operatorStack = [];
+        let groupCounts = [];
         for (let i = 0; i < infix.length; i++) {
             const token = infix[i];
             const expectUnary = unaryPrefixes.includes(i === 0 ? null : infix[i-1]);
             const operator = this.getOperator(token, expectUnary);
             if (token === "(") {
                 operatorStack.push(token);
-                postfix.push(token);
+                groupCounts.push(0);
             } else if (token === "[") {
                 operatorStack.push(token);
-                postfix.push(token);
+                groupCounts.push(0);
             } else if (token === ")") {
                 while (operatorStack.length && operatorStack[operatorStack.length-1] !== "(") {
                     postfix.push(operatorStack.pop());
@@ -176,10 +183,10 @@ class ShuntingYard {
                     throw new Error("Mismatched grouping operator: )")
                 }
                 operatorStack.pop();
+                postfix.push("(" + groupCounts.pop() +  ")");
                 if (operatorStack.length && typeof operatorStack[operatorStack.length-1].arity === 'undefined') {
                 	postfix.push(operatorStack.pop());
                 }
-                postfix.push(token);
             } else if (token === "]") {
                 while (operatorStack.length && operatorStack[operatorStack.length-1] !== "[") {
                     postfix.push(operatorStack.pop());
@@ -188,7 +195,10 @@ class ShuntingYard {
                     throw new Error("Mismatched grouping operator: ]")
                 }
                 operatorStack.pop();
-                postfix.push(token);
+                postfix.push("[" + groupCounts.pop() +  "]");
+            	if (groupCounts[groupCounts.length-1] === 0) {
+                	groupCounts[groupCounts.length-1]++;
+                } 
             } else if (token === ",") {
                 while (operatorStack.length && !["(","[",","].includes(operatorStack[operatorStack.length-1])) {
                     postfix.push(operatorStack.pop());
@@ -196,7 +206,12 @@ class ShuntingYard {
                 if (operatorStack.length === 0) {
                     throw new Error("Mismatched grouping operator: ,");
                 }
-                postfix.push(token);
+            	if (groupCounts.length) {
+                	if (groupCounts[groupCounts.length-1] == 0) {
+                        throw new Error("Mismatched grouping operator: ,");
+                    }
+                	groupCounts[groupCounts.length-1]++;
+                }
             } else if (operator) {
                 while (operatorStack.length && 
                        !["(","[",","].includes(operatorStack[operatorStack.length-1]) &&
@@ -207,10 +222,19 @@ class ShuntingYard {
                 operatorStack.push(operator);
             } else {
                 postfix.push(token);
+            	if (groupCounts.length && groupCounts[groupCounts.length-1] === 0) {
+                	groupCounts[groupCounts.length-1]++;
+                } 
             }
         }
         while (operatorStack.length) {
             postfix.push(operatorStack.pop());
+        }
+        if (postfix.includes("(")) {
+            throw new Error("Mismatched grouping operator: (")
+        }
+        if (postfix.includes("[")) {
+            throw new Error("Mismatched grouping operator: [")
         }
         return postfix;
     }
@@ -221,57 +245,59 @@ class ShuntingYard {
         } else if (postfix.length === 0) {
             return "";
         }
-        let parameters = [];
-        let arrays = [];
+        let groupLength = 0;
         let operands = [];
         for (let i = 0; i < postfix.length; i++) {
-            if (postfix[i] === ",") {
-                parameters[parameters.length-1].push(operands.pop());
-            } else if (postfix[i] === "(") {
-            	parameters.push([]);
-            } else if (postfix[i] === ")") {
-            	if (operands.length) {
-                	parameters[parameters.length-1].push(operands.pop());
-                }
-            	operands.push(parameters.pop());
-            } else if (postfix[i] === "[") {
-            	arrays.push([]);
-            } else if (postfix[i] === "]") {
-            	if (operands.length) {
-                	arrays[arrays.length-1].push(operands.pop());
-                }
-            	operands.push(arrays.pop());
-            } else if (postfix[i] instanceof Operator) {
-            	if (postfix[i].arity !== 0) {
-                    if (typeof postfix[i].arity === 'undefined') {
-                    	if (operands.length) {
-                            parameters[parameters.length-1].push(operands.pop());
-                        }
-                        //alert("Calling " + postfix[i].token + " with parameters (" + JSON.stringify(parameters[parameters.length-1]) + ")");
-                        operands.push(postfix[i].operation(...parameters.pop()));
+            if (groupLength > 1 && 
+                (!(postfix[i] instanceof Operator) || typeof postfix[i].arity !== 'undefined')) {
+                let operandList = operands.slice(-groupLength);
+            	throw new Error("Missing function call for operands: " + asString(operandList).slice(1,-1));
+            }
+            groupLength = 0;
+            if (postfix[i] instanceof Operator) {
+            	let operator = postfix[i];
+            	if (operator.arity !== 0) {
+                    if (typeof operator.arity === 'undefined') {
+                        let operandList = operands.splice(-groupLength);
+                        operands.push(operator.operation(...operandList));
                     } else {
-                        if (operands.length < postfix[i].arity) {
-                            throw new Error("Too few operands passed to " + postfix[i].token);
+                        if (operands.length < operator.arity) {
+                            throw new Error("Too few operands passed to " + operator.token);
                         }
-                        let operandList = operands.splice(-postfix[i].arity);
-                        //alert("Calling " + postfix[i].operation.name + " with operands (" + JSON.stringify(operandList.join(",")) + ")");
-                        operands.push(postfix[i].operation(...operandList));
+                        let operandList = operands.splice(-operator.arity);
+                        operands.push(operator.operation(...operandList));
                     }
                 } else {
-                	operands.push(postfix[i].operation());
+                	operands.push(operator.operation());
                 }
+            } else if (Object.prototype.toString.call(postfix[i]) === '[object String]' &&
+                       postfix[i].startsWith("(")) {
+            	let count = Number(postfix[i].slice(1, -1));
+                if (count > operands.length) {
+                	throw new Error("Mismatched grouping operator: ,");
+                }
+                groupLength = count;
+            } else if (Object.prototype.toString.call(postfix[i]) === '[object String]' &&
+                       postfix[i].startsWith("[")) {
+            	let count = Number(postfix[i].slice(1, -1));
+                if (count > operands.length) {
+                	throw new Error("Mismatched grouping operator: ,");
+                }
+                let operandList = operands.splice(-count);
+            	operands.push(operandList);
             } else {
                 operands.push(postfix[i]);
             }
         }
-        if (arrays.length) {
-            throw new Error("Mismatched grouping operator: [")
-        }
-        if (parameters.length) {
-            throw new Error("Mismatched grouping operator: (")
+        if (groupLength > 1) {
+            let operandList = operands.splice(-groupLength);
+            throw new Error("Missing function call for operands: " + asString(operandList).slice(1,-1));
         }
         if (operands.length > 1) {
-            throw new Error("Too few operators provided! Remaining operands: " + operands.join(","));
+            throw new Error("Too few operators provided for operands " + asString(operands).slice(1,-1));
+        }
+        if (operands.length == 0) {
+        	return "";
         }
         return operands[0];
     }
@@ -284,14 +310,14 @@ class ShuntingYard {
         if (Array.isArray(operand)) {
             return operand.map(ShuntingYard.unaryPlus);
         }
-        return ShuntingYard.multiply(operand, 1);
+        return ShuntingYard.multiply(1, operand);
     }
 
     static unaryMinus(operand) {
         if (Array.isArray(operand)) {
             return operand.map(ShuntingYard.unaryMinus);
         }
-        return ShuntingYard.multiply(operand, -1);
+        return ShuntingYard.multiply(-1, operand);
     }
 
     static append() {
@@ -319,16 +345,11 @@ class ShuntingYard {
         //[1,2,3] + [4] = ([1,2,3] + [4,0,0]) = [5,2,3]
         //[1,2,3] + [4,5,6] = [5,7,9]
         //[1,2,3] + [4,5,6,7,8,9] = ([1,2,3,0,0,0] + [4,5,6,7,8,9]) = [5,7,9,7,8,9]
+        if (Array.isArray(addend)) {
+            return addend.map(value => ShuntingYard.plus(augend, value));
+        }
         if (Array.isArray(augend)) {
-            if (!Array.isArray(addend)) {
-                return augend.map(value => ShuntingYard.plus(value, addend));
-            } else {
-                let sum = [];
-                for (let i = 0; i < augend.length || i < addend.length; i++) {
-                    sum.push(ShuntingYard.plus((augend[i] ? augend[i] : 0), (addend[i] ? addend[i] : 0)));
-                }
-                return sum;
-            }
+            return augend.map(value => ShuntingYard.plus(value, addend));
         }
         return augend + addend;
     }
@@ -338,46 +359,31 @@ class ShuntingYard {
         //[5,2,3] - [4] = [1,2,3]
         //[5,7,9] - [4,5,6] = [1,2,3]
         //[5,7,9,7,8,9] - [4,5,6,7,8,9] = [1,2,3,0,0,0]
+        if (Array.isArray(subtrahend)) {
+            return subtrahend.map(value => ShuntingYard.minus(minuend, value));
+        }
         if (Array.isArray(minuend)) {
-            if (!Array.isArray(subtrahend)) {
-                return minuend.map(value => ShuntingYard.minus(value, subtrahend));
-            } else {
-                let difference = [];
-                for (let i = 0; i < minuend.length || i < subtrahend.length; i++) {
-                    difference.push(ShuntingYard.minus((minuend[i] ? minuend[i] : 0), (subtrahend[i] ? subtrahend[i] : 0)));
-                }
-                return difference;
-            }
+            return minuend.map(value => ShuntingYard.minus(value, subtrahend));
         }
         return minuend - subtrahend;
     }
 
     static multiply(multiplier, multiplicand) {
+        if (Array.isArray(multiplicand)) {
+            return multiplicand.map(value => ShuntingYard.multiply(multiplier, value));
+        }
         if (Array.isArray(multiplier)) {
-            if (!Array.isArray(multiplicand)) {
-                return multiplier.map(value => ShuntingYard.multiply(value, multiplicand));
-            } else {
-                let product = [];
-                for (let i = 0; i < multiplier.length || i < multiplicand.length; i++) {
-                    product.push(ShuntingYard.multiply((multiplier[i] ? multiplier[i] : 0), (multiplicand[i] ? multiplicand[i] : 0)));
-                }
-                return product;
-            }
+            return multiplier.map(value => ShuntingYard.multiply(value, multiplicand));
         }
         return multiplier * multiplicand;
     }
 
     static divide(dividend, divisor) {
+        if (Array.isArray(divisor)) {
+            return divisor.map(value => ShuntingYard.divide(dividend, value));
+        }
         if (Array.isArray(dividend)) {
-            if (!Array.isArray(divisor)) {
-                return dividend.map(value => ShuntingYard.divide(value, divisor));
-            } else {
-                let quotient = [];
-                for (let i = 0; i < dividend.length || i < divisor.length; i++) {
-                    quotient.push(ShuntingYard.divide((dividend[i] ? dividend[i] : 0), (divisor[i] ? divisor[i] : 0)));
-                }
-                return quotient;
-            }
+            return dividend.map(value => ShuntingYard.divide(value, divisor));
         }
         return dividend / divisor;
     }
@@ -405,35 +411,81 @@ class ShuntingYard {
         return ShuntingYard.multiply(operand, ShuntingYard.factorial(operand - 1));
     }
     
-    static unaryDiceRoll(...sides) {
-    	return ShuntingYard.diceRoll(1, ...sides);
-    }
-
-    static diceRoll(quantity, ...sides) {
-        /*if (Array.isArray(quantity)) {
-            return quantity.map(function(q) { return ShuntingYard.diceRoll(q, ...sides); });
-        }
-        if (Array.isArray(sides)) {
-            return sides.map(function(s) { return ShuntingYard.diceRoll(quantity, ...s); });
-        }*/
-        return ShuntingYard.multiply(quantity, Math.max(sides));
-    }
-
-    static customDiceRoll(quantity, ...sides) {
-        /*if (Array.isArray(quantity)) {
-            return quantity.map(function(q) { return ShuntingYard.customDiceRoll(q, ...sides); });
-        }
-        if (Array.isArray(sides)) {
-            return sides.map(function(s) { return ShuntingYard.customDiceRoll(quantity, ...s); });
-        }*/
-        return ShuntingYard.multiply(quantity, Math.max(sides));
-    }
-    
     static sum(...summands) {
     	let sum = 0;
         for (let i = 0; i < summands.length; i++) {
         	sum = ShuntingYard.plus(sum, summands[i]);
         }
         return sum;
+    }
+    
+    static lt(operand1, operand2) {
+        if (Array.isArray(operand2)) {
+            return operand2.map(value => ShuntingYard.lt(operand1, value));
+        }
+        if (Array.isArray(operand1)) {
+            return operand1.map(value => ShuntingYard.lt(value, operand2));
+        }
+        return operand1 < operand2;
+    }
+    
+    static lte(operand1, operand2) {
+        if (Array.isArray(operand2)) {
+            return operand2.map(value => ShuntingYard.lte(operand1, value));
+        }
+        if (Array.isArray(operand1)) {
+            return operand1.map(value => ShuntingYard.lte(value, operand2));
+        }
+        return operand1 <= operand2;
+    }
+    
+    static gt(operand1, operand2) {
+        if (Array.isArray(operand2)) {
+            return operand2.map(value => ShuntingYard.gt(operand1, value));
+        }
+        if (Array.isArray(operand1)) {
+            return operand1.map(value => ShuntingYard.gt(value, operand2));
+        }
+        return operand1 > operand2;
+    }
+    
+    static gte(operand1, operand2) {
+        if (Array.isArray(operand2)) {
+            return operand2.map(value => ShuntingYard.gte(operand1, value));
+        }
+        if (Array.isArray(operand1)) {
+            return operand1.map(value => ShuntingYard.gte(value, operand2));
+        }
+        return operand1 >= operand2;
+    }
+    
+    static eq(operand1, operand2) {
+        if (Array.isArray(operand2)) {
+            return operand2.map(value => ShuntingYard.eq(operand1, value));
+        }
+        if (Array.isArray(operand1)) {
+            return operand1.map(value => ShuntingYard.eq(value, operand2));
+        }
+        return operand1 == operand2;
+    }
+    
+    static unaryDiceRoll(sides) {
+    	return ShuntingYard.diceRoll(1,sides);
+    }
+
+    static diceRoll(quantity, sides) {
+        if (!Array.isArray(sides)) {
+        	if (isNaN(Number(sides))) {
+            	throw new Exception("Invalid sides for a dice roll: " + asString(sides));
+            }
+            sides = [...Array(sides).keys()].map(num => num + 1);
+        }
+        if (Array.isArray(quantity)) {
+            return quantity.map(function(q) {
+            	return ShuntingYard.diceRoll(q, sides); 
+            });
+        }
+        let roll = Math.floor(Math.random() * sides.length);
+        return ShuntingYard.multiply(quantity, sides[roll]);
     }
 }
