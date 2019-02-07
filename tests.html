@@ -10,7 +10,6 @@
                 }
                 return String(argument);
             }
-            const parser = new ShuntingYard();
             function appendSuccess(cmd, expected) {
                 const successContainer = document.getElementById("success");
                 let message = cmd + " = " + expected;
@@ -38,16 +37,17 @@
                     appendFailure(cmdString, expectedString, resultString);
                 }
             }
-            const successContainer = document.getElementById("success");
-            const failContainer = document.getElementById("fail");
-            let successLabel = document.createElement("b");
-            let failLabel = document.createElement("b");
-            successLabel.innerHTML = "Successful tests: ";
-            failLabel.innerHTML = "Failed tests:";
-            successContainer.appendChild(successLabel);
-            failContainer.appendChild(failLabel);
             window.onload = function() {
-                //test("", "");
+                const parser = new ShuntingYard();
+                const successContainer = document.getElementById("success");
+                const failContainer = document.getElementById("fail");
+                let successLabel = document.createElement("b");
+                let failLabel = document.createElement("b");
+                successLabel.innerHTML = "Successful tests: ";
+                failLabel.innerHTML = "Failed tests:";
+                successContainer.appendChild(successLabel);
+                failContainer.appendChild(failLabel);
+                
                 try {
                     test("2","2");
                     test("+2","2");
