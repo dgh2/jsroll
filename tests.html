@@ -78,6 +78,7 @@
                     test("[2,[3,4]]", "[2,[3,4]]");
                     test("[2,-[3,4]]", "[2,[-3,-4]]");
                     test("[2,3*[3,4]]", "[2,[9,12]]");
+                    test("1+[2,3]+4", "[7,8]");
                     test("MIN(2)", "2");
                     test("MAX(2,10,-3)", "10");
                     test("MIN(2,10,-3)", "-3");
@@ -90,8 +91,8 @@
                     test("]", "Mismatched grouping operator: ]");
                     test("(1", "Mismatched grouping operator: (");
                     test("[1", "Mismatched grouping operator: [");
-                    test("1(", "Mismatched grouping operator: (");
-                    test("1[", "Mismatched grouping operator: [");
+                    test("1(", "Unexpected grouping operator: (");
+                    test("1[", "Unexpected grouping operator: [");
                     test("1)", "Mismatched grouping operator: )");
                     test("1]", "Mismatched grouping operator: ]");
                     test(")1", "Mismatched grouping operator: )");
@@ -100,15 +101,19 @@
                     test("[1,", "Mismatched grouping operator: [");
                     test("(1,)", "Mismatched grouping operator: ,");
                     test("[1,]", "Mismatched grouping operator: ,");
-                    test("(,1)", "Mismatched grouping operator: ,");
-                    test("[,1]", "Mismatched grouping operator: ,");
+                    test("(,1)", "Unexpected grouping operator: ,");
+                    test("[,1]", "Unexpected grouping operator: ,");
                     test("(2,3)", "Missing function call for operands: 2,3");
                     test("1+(2,3)+4", "Missing function call for operands: 2,3");
-                    test("1+[2,3]+4", "[7,8]");
-                    test("1[+]2", "?");
-                    test("1+[+]2", "?");
-                    test("1(+)2", "?");
-                    test("1+(+)2", "?");
+                    test("1[+]2", "Unexpected grouping operator: [");
+                    test("1+[+]2", "Unexpected grouping operator: ]");
+                    test("1(+)2", "Unexpected grouping operator: (");
+                    test("1+(+)2", "Unexpected grouping operator: )");
+                    test("1+", "Too few operands provided for operator: +");
+                    test("1(2)", "Unexpected grouping operator: (")
+                    test(",", "Unexpected grouping operator: ,");
+                    test("1,2", "Unexpected grouping operator: ,");
+                    test("1,", "Unexpected grouping operator: ,");
                     test("!0", "true");
                     test("!4", "false");
                     test("0!", "1");
@@ -116,9 +121,6 @@
                     test("-4!", "undefined");
                     test("-(4!)", "-24");
                     test("SUM(3,4,5)", "12");
-                    test("SUM(-3,-4,-5)", "-12");
-                    test("-SUM(3,4,5)", "-12");
-                    test("Σ(3,4,5)", "12");
                     test("Σ(-3,-4,-5)", "-12");
                     test("-Σ(3,4,5)", "-12");
                     test("2<3", "true");
@@ -179,7 +181,7 @@
                 } catch (err) {
                     const failContainer = document.getElementById("fail");
                     failContainer.appendChild(document.createElement("br"));
-                    failContainer.appendChild(document.createTextNode(err.message));
+                    failContainer.appendChild(document.createTextNode("FATAL EXCEPTION: " + err.message));
                 }
             }
         </script>
