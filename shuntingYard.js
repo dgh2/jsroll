@@ -163,72 +163,103 @@ class ShuntingYard {
         } else if (infix.length === 0) {
             return infix;
         }
-        const unaryPrefixes = [null,"(","[",","].concat(this.operators.filter(op => op.precedence !== 0).map(op => op.token));
+        const unaryPrefixes = [null,"(","[",","].concat(this.operators.filter(op => op.precedence !== 0));
         let postfix = [];
         let operatorStack = [];
-        let groupCounts = [];
+        let groupCounts = [0];
+        let groupOperatorCounts = [0];
+        let previousToken = null;
         for (let i = 0; i < infix.length; i++) {
             const token = infix[i];
-            const expectUnary = unaryPrefixes.includes(i === 0 ? null : infix[i-1]);
+            const expectUnary = unaryPrefixes.includes(i === 0 ? null : previousToken);
             const operator = this.getOperator(token, expectUnary);
-            if (token === "(") {
+            //alert(token + " (" + i + ") " + expectUnary);
+            if (i > 0) {
+                //alert(infix[i-1] + " (" + (i-1) + ") groupCounts: " + asString(groupCounts));
+                //alert(infix[i-1] + " (" + (i-1) + ") groupOperatorCounts: " + asString(groupOperatorCounts));
+            }
+            if (["(","["].includes(token)) {
+            	if (!expectUnary) {
+                	throw new Error("Unexpected grouping operator: " + token);
+                }
                 operatorStack.push(token);
+                if (groupCounts[groupCounts.length-1] == 0) {
+                	groupCounts[groupCounts.length-1]++; //only count the first operand/group added to a group, additional operands require commas
+                }
                 groupCounts.push(0);
-            } else if (token === "[") {
-                operatorStack.push(token);
-                groupCounts.push(0);
-            } else if (token === ")") {
-                while (operatorStack.length && operatorStack[operatorStack.length-1] !== "(") {
+                groupOperatorCounts.push(0);
+            } else if ([")","]"].includes(token)) {
+            	let opening = (token === ")" ? "(" : "[");
+                while (operatorStack.length && operatorStack[operatorStack.length-1] !== opening) {
+                    if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
+                        groupOperatorCounts[groupOperatorCounts.length-1]--;
+                    } else {
+                        throw new Error("1 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+                    }
                     postfix.push(operatorStack.pop());
                 }
-                if (operatorStack.length === 0) {
-                    throw new Error("Mismatched grouping operator: )")
+                if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
+                    throw new Error("1.5 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+                }
+            	if (groupCounts.length === 1) {
+                	throw new Error("Mismatched grouping operator: " + token);
+                }
+            	if (previousToken instanceof Operator && previousToken.fix !== Operator.postfix) {
+                	throw new Error("Unexpected grouping operator: " + token);
                 }
                 operatorStack.pop();
-                postfix.push("(" + groupCounts.pop() +  ")");
-                if (operatorStack.length && typeof operatorStack[operatorStack.length-1].arity === 'undefined') {
-                	postfix.push(operatorStack.pop());
+                groupOperatorCounts.pop();
+                postfix.push(opening + groupCounts.pop() + token);
+                if (token === ")") { //if a set of parenthesis was just closed, check for a preceeding function call
+                    if (operatorStack.length && typeof operatorStack[operatorStack.length-1].arity === 'undefined') {
+                        if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
+                            groupOperatorCounts[groupOperatorCounts.length-1]--;
+                        } else {
+                            throw new Error("1.75 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+                        }
+                        postfix.push(operatorStack.pop());
+                    }
                 }
-            } else if (token === "]") {
-                while (operatorStack.length && operatorStack[operatorStack.length-1] !== "[") {
-                    postfix.push(operatorStack.pop());
-                }
-                if (operatorStack.length === 0) {
-                    throw new Error("Mismatched grouping operator: ]")
-                }
-                operatorStack.pop();
-                postfix.push("[" + groupCounts.pop() +  "]");
-            	if (groupCounts[groupCounts.length-1] === 0) {
-                	groupCounts[groupCounts.length-1]++;
-                } 
             } else if (token === ",") {
                 while (operatorStack.length && !["(","[",","].includes(operatorStack[operatorStack.length-1])) {
+                    if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
+                        groupOperatorCounts[groupOperatorCounts.length-1]--;
+                    } else {
+                        throw new Error("3 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+                    }
                     postfix.push(operatorStack.pop());
                 }
-                if (operatorStack.length === 0) {
-                    throw new Error("Mismatched grouping operator: ,");
+            	if (expectUnary || groupCounts.length === 1 || groupCounts[groupCounts.length-1] === 0) {
+                	throw new Error("Unexpected grouping operator: " + token);
                 }
-            	if (groupCounts.length) {
-                	if (groupCounts[groupCounts.length-1] == 0) {
-                        throw new Error("Mismatched grouping operator: ,");
-                    }
-                	groupCounts[groupCounts.length-1]++;
-                }
+                groupCounts[groupCounts.length-1]++; //expect another operand
             } else if (operator) {
                 while (operatorStack.length && 
                        !["(","[",","].includes(operatorStack[operatorStack.length-1]) &&
                        (operatorStack[operatorStack.length-1].precedence < operator.precedence ||
                         (!operator.rightAssociative && operatorStack[operatorStack.length-1].precedence === operator.precedence))) {
+                    if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
+                        groupOperatorCounts[groupOperatorCounts.length-1]--;
+                    } else {
+                        throw new Error("4 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+                    }
                     postfix.push(operatorStack.pop());
                 }
                 operatorStack.push(operator);
+                groupOperatorCounts[groupOperatorCounts.length-1]++;
             } else {
+            	if (!expectUnary) {
+                	throw new Error("Unexpected operand: " + token);
+                }
                 postfix.push(token);
-            	if (groupCounts.length && groupCounts[groupCounts.length-1] === 0) {
-                	groupCounts[groupCounts.length-1]++;
-                } 
+                if (groupCounts[groupCounts.length-1] == 0) {
+                	groupCounts[groupCounts.length-1]++; //only count the first operand/group added to a group, additional operands require commas
+                }
             }
+            previousToken = operator ? operator : token;
         }
+        //alert(infix[infix.length-1] + " (" + (infix.length-1) + ") groupCounts: " + asString(groupCounts));
+        //alert(infix[infix.length-1] + " (" + (infix.length-1) + ") groupOperatorCounts: " + asString(groupOperatorCounts));
         while (operatorStack.length) {
             postfix.push(operatorStack.pop());
         }
@@ -264,7 +295,7 @@ class ShuntingYard {
                         operands.push(operator.operation(...operandList));
                     } else {
                         if (operands.length < operator.arity) {
-                            throw new Error("Too few operands passed to " + operator.token);
+                            throw new Error("Too few operands provided for operator: " + operator.token);
                         }
                         let operandList = operands.splice(-operator.arity);
                         operands.push(operator.operation(...operandList));
@@ -296,7 +327,7 @@ class ShuntingYard {
             throw new Error("Missing function call for operands: " + asString(operandList).slice(1,-1));
         }
         if (operands.length > 1) {
-            throw new Error("Too few operators provided for operands " + asString(operands).slice(1,-1));
+            throw new Error("Too few operators provided for operands: " + asString(operands).slice(1,-1));
         }
         if (operands.length == 0) {
         	return "";
