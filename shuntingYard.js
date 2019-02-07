@@ -488,4 +488,18 @@ class ShuntingYard {
         let roll = Math.floor(Math.random() * sides.length);
         return ShuntingYard.multiply(quantity, sides[roll]);
     }
+    
+    static arrayUnaryDiceRoll(sides) {
+    	return [ShuntingYard.unaryDiceRoll(sides)];
+    }
+    
+    static arrayDiceRoll(quantity, sides) {
+        if (Array.isArray(sides)) {
+            return sides.map(value => ShuntingYard.arrayDiceRoll(quantity, value));
+        }
+        if (Array.isArray(quantity)) {
+            return quantity.map(value => ShuntingYard.arrayDiceRoll(value, sides));
+        }
+        return ShuntingYard.diceRoll(Array(quantity).fill(1), sides);
+    }
 }
