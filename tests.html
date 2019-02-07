@@ -3,6 +3,7 @@
     <head>
         <script type="text/javascript" src="shuntingYard.js"></script>
         <script type="text/javascript">
+            const parser = new ShuntingYard();
             function asString() {
                 let argument = arguments[0];
                 if (Array.isArray(argument)) {
@@ -38,7 +39,6 @@
                 }
             }
             window.onload = function() {
-                const parser = new ShuntingYard();
                 const successContainer = document.getElementById("success");
                 const failContainer = document.getElementById("fail");
                 let successLabel = document.createElement("b");
