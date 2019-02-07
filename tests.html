@@ -141,7 +141,7 @@
                     test("[1,2,3,4]<=[2,3]", "[[true,true,false,false],[true,true,true,false]]");
                     test("[1,2,3,4]>=[2,3]", "[[false,true,true,true],[false,false,true,true]]");
 
-                    let _random = Math.random; //store original random funtion
+                    let _random = Math.random; //store original random function
                     try {
                         Math.random = () => 0.9999999999999999; //mock random to always return max
                         test("d20", "20");
@@ -152,6 +152,10 @@
                         test("2d[20,10,16]", "32");
                         test("[2]d[20,10,16]", "[32]");
                         test("[1,1,1,1]d20", "[20,20,20,20]");
+                        test("[d]20", "[20]");
+                        test("1[d]20", "[20]");
+                        test("4[d]20", "[20,20,20,20]");
+                        test("[2,2][d]20", "[[20,20],[20,20]]")
                         Math.random = () => 0; //mock random to always return min
                         test("d20", "1");
                         test("1d20", "1");
@@ -161,8 +165,12 @@
                         test("2d[20,10,16]", "40");
                         test("[2]d[20,10,16]", "[40]");
                         test("[1,1,1,1]d20", "[1,1,1,1]");
+                        test("[d]20", "[1]");
+                        test("1[d]20", "[1]");
+                        test("4[d]20", "[1,1,1,1]");
+                        test("[2,2][d]20", "[[1,1],[1,1]]")
                     } finally {
-                        Math.random = _random;
+                        Math.random = _random; //restore original random function
                     }
                 } catch (err) {
                     const failContainer = document.getElementById("fail");
