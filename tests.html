@@ -19,20 +19,33 @@
             }
             function appendFailure(cmd, expected, result) {
                 const failContainer = document.getElementById("fail");
-                let message = cmd + " = " + result + " not " + expected;
+                let message = cmd + ": Received \"" + result + "\" but expected \"" + expected + "\"";
                 failContainer.appendChild(document.createElement("br"));
                 failContainer.appendChild(document.createTextNode(message));
             }
             function test(cmd, expected) {
                 let cmdString = asString(cmd);
                 let expectedString = asString(expected);
-                let resultString = asString(parser.process(cmdString));
+                let resultString;
+                try {
+                    resultString = asString(parser.process(cmdString));
+                } catch (err) {
+                    resultString = err.message;
+                }
                 if (resultString === expectedString) {
                     appendSuccess(cmdString, expectedString);
                 } else {
                     appendFailure(cmdString, expectedString, resultString);
                 }
             }
+            const successContainer = document.getElementById("success");
+            const failContainer = document.getElementById("fail");
+            let successLabel = document.createElement("b");
+            let failLabel = document.createElement("b");
+            successLabel.innerHTML = "Successful tests: ";
+            failLabel.innerHTML = "Failed tests:";
+            successContainer.appendChild(successLabel);
+            failContainer.appendChild(failLabel);
             window.onload = function() {
                 //test("", "");
                 try {
@@ -99,8 +112,8 @@
                     test("-4!", "undefined");
                     test("-(4!)", "-24");
                     test("SUM(3,4,5)", "12");
-                    test("Σ(-3,-4,-5)", "-12");
-                    test("-Σ(3,4,5)", "-12");
+                    test("S(-3,-4,-5)", "-12");
+                    test("-S(3,4,5)", "-12");
                     test("2<3", "true");
                     test("3<2", "false");
                     test("3>2", "true");
@@ -157,8 +170,7 @@
         </script>
     </head>
     <body>
-        <div id="fail"><b>Failed tests:</b></div>
-        <br />
-        <div id="success"><b>Successful tests:</b></div>
+        <div id="fail"></div><br />
+        <div id="success"></div>
     </body>
 </html>
