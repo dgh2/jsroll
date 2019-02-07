@@ -97,6 +97,8 @@ class ShuntingYard {
         operators.push(Operator.createBinaryOperator("==", 3, ShuntingYard.eq));
         operators.push(Operator.createUnaryPrefixOperator("d", ShuntingYard.unaryDiceRoll, true));
         operators.push(Operator.createBinaryOperator("d", 2, ShuntingYard.diceRoll, true));
+        operators.push(Operator.createUnaryPrefixOperator("[d]", ShuntingYard.arrayUnaryDiceRoll, true));
+        operators.push(Operator.createBinaryOperator("[d]", 2, ShuntingYard.arrayDiceRoll, true));
 
         //test operations
         operators.push(Operator.createBinaryOperator("!", 3, ShuntingYard.append));
