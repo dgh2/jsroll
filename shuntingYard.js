@@ -1,9 +1,9 @@
 function asString(argument) {
-	let string = "";
+    let string = "";
     if (Array.isArray(argument)) {
         string += "[" + argument.map(asString).join(",") + "]";
     } else {
-    	string += "" + argument;
+        string += "" + argument;
     }
     return string;
 }
@@ -49,7 +49,7 @@ class Operator {
     }
 
     static createUnaryPostfixOperator(token, operation) { //example: factorial, 3!
-        return new this(token, 2, 1, this.postfix, operation, false);
+        return new this(token, 2, 1, this.postfix, operation, true);
     }
 
     static createFunctionOperator(token, operation) { //example: MAX
@@ -101,8 +101,9 @@ class ShuntingYard {
         operators.push(Operator.createBinaryOperator("[d]", 2, ShuntingYard.arrayDiceRoll, true));
 
         //test operations
-        operators.push(Operator.createBinaryOperator("!", 3, ShuntingYard.append));
         operators.push(Operator.createFunctionOperator("Σ", ShuntingYard.sum));
+        operators.push(Operator.createBinaryOperator("ErroneousOperator", 2, undefined));
+        operators.push(Operator.createUnaryPostfixOperator("ErroneousOperator", undefined));
 
         //sort by longest tokens first, so operators can be added in any order
         operators.sort(Operator.compareLength);
@@ -117,7 +118,7 @@ class ShuntingYard {
     }
 
     static escapeRegex(regex) {
-        //add escape characters before all regex special characters in the input regex
+        //add escape characters before all regex special characters in the input string
         return regex.replace(/[-.*+?^${}()|[\]\\\/]/g, '\\$&');
     }
 
@@ -143,16 +144,22 @@ class ShuntingYard {
 
     getOperator(token, isUnary) {
         let operators = this.operators.filter(op => op.token === token);
-        if (operators && operators.length > 1) {
+        if (operators.length > 1) {
             if (isUnary) {
                 operators = operators.filter(op => typeof op.fix === 'undefined' || 
-                								(op.fix === Operator.prefix && op.arity === 1));
+                                             (op.fix === Operator.prefix && op.arity === 1));
             } else {
                 operators = operators.filter(op => typeof op.fix === 'undefined' || 
-                								!(op.fix === Operator.prefix && op.arity === 1));
+                                             !(op.fix === Operator.prefix && op.arity === 1));
+            }
+            if (operators.length === 0) {
+                throw new Error("Unexpected operator: " + token); //token is operator, but used incorrectly
             }
         }
-        if (operators && operators.length) {
+        if (operators.length > 1) {
+            throw new Error("Indeterminate operator: " + token); //conflicting tokens have been defined
+        }
+        if (operators.length === 1) {
             return operators[0];
         }
     }
@@ -163,7 +170,7 @@ class ShuntingYard {
         } else if (infix.length === 0) {
             return infix;
         }
-        const unaryPrefixes = [null,"(","[",","].concat(this.operators.filter(op => op.precedence !== 0));
+        const unaryPrefixes = [null,"(","[",","].concat(this.operators.filter(op => op.precedence !== 0 && op.fix != Operator.postfix));
         let postfix = [];
         let operatorStack = [];
         let groupCounts = [0];
@@ -173,49 +180,44 @@ class ShuntingYard {
             const token = infix[i];
             const expectUnary = unaryPrefixes.includes(i === 0 ? null : previousToken);
             const operator = this.getOperator(token, expectUnary);
-            //alert(token + " (" + i + ") " + expectUnary);
-            if (i > 0) {
-                //alert(infix[i-1] + " (" + (i-1) + ") groupCounts: " + asString(groupCounts));
-                //alert(infix[i-1] + " (" + (i-1) + ") groupOperatorCounts: " + asString(groupOperatorCounts));
-            }
             if (["(","["].includes(token)) {
-            	if (!expectUnary) {
-                	throw new Error("Unexpected grouping operator: " + token);
+                if (!expectUnary) {
+                    throw new Error("Unexpected grouping operator: " + token);
                 }
                 operatorStack.push(token);
-                if (groupCounts[groupCounts.length-1] == 0) {
-                	groupCounts[groupCounts.length-1]++; //only count the first operand/group added to a group, additional operands require commas
-                }
+                groupCounts[groupCounts.length-1]++;
                 groupCounts.push(0);
                 groupOperatorCounts.push(0);
             } else if ([")","]"].includes(token)) {
-            	let opening = (token === ")" ? "(" : "[");
+                let opening = (token === ")" ? "(" : "[");
                 while (operatorStack.length && operatorStack[operatorStack.length-1] !== opening) {
                     if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
                         groupOperatorCounts[groupOperatorCounts.length-1]--;
                     } else {
-                        throw new Error("1 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+                        throw new Error("Mismatched grouping operator: " + token);
                     }
                     postfix.push(operatorStack.pop());
                 }
                 if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
-                    throw new Error("1.5 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+/*----UNTESTED----*/throw new Error("1. Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
                 }
-            	if (groupCounts.length === 1) {
-                	throw new Error("Mismatched grouping operator: " + token);
+                if (groupCounts.length === 1) {
+                    throw new Error("Mismatched grouping operator: " + token);
                 }
-            	if (previousToken instanceof Operator && previousToken.fix !== Operator.postfix) {
-                	throw new Error("Unexpected grouping operator: " + token);
+                if (previousToken instanceof Operator && previousToken.fix !== Operator.postfix) {
+                    throw new Error("Unexpected grouping operator: " + token);
                 }
                 operatorStack.pop();
                 groupOperatorCounts.pop();
                 postfix.push(opening + groupCounts.pop() + token);
                 if (token === ")") { //if a set of parenthesis was just closed, check for a preceeding function call
-                    if (operatorStack.length && typeof operatorStack[operatorStack.length-1].arity === 'undefined') {
+                    if (operatorStack.length && 
+                        operatorStack[operatorStack.length-1] instanceof Operator &&
+                        typeof operatorStack[operatorStack.length-1].arity === 'undefined') {
                         if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
                             groupOperatorCounts[groupOperatorCounts.length-1]--;
                         } else {
-                            throw new Error("1.75 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+/*--------UNTESTED--------*/throw new Error("2. Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
                         }
                         postfix.push(operatorStack.pop());
                     }
@@ -225,49 +227,54 @@ class ShuntingYard {
                     if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
                         groupOperatorCounts[groupOperatorCounts.length-1]--;
                     } else {
-                        throw new Error("3 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+/*------UNTESTED------*/throw new Error("3. Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
                     }
                     postfix.push(operatorStack.pop());
                 }
-            	if (expectUnary || groupCounts.length === 1 || groupCounts[groupCounts.length-1] === 0) {
-                	throw new Error("Unexpected grouping operator: " + token);
+                if (expectUnary || groupCounts.length === 1 || groupCounts[groupCounts.length-1] === 0) {
+                    throw new Error("Unexpected grouping operator: " + token);
                 }
-                groupCounts[groupCounts.length-1]++; //expect another operand
+                postfix.push(token);
+                groupCounts[groupCounts.length-1]++;
             } else if (operator) {
+                groupCounts[groupCounts.length-1] -= (typeof operator.arity === 'undefined' ? 1 : operator.arity) - 1;
                 while (operatorStack.length && 
                        !["(","[",","].includes(operatorStack[operatorStack.length-1]) &&
+                       operatorStack[operatorStack.length-1] instanceof Operator &&
                        (operatorStack[operatorStack.length-1].precedence < operator.precedence ||
                         (!operator.rightAssociative && operatorStack[operatorStack.length-1].precedence === operator.precedence))) {
                     if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
                         groupOperatorCounts[groupOperatorCounts.length-1]--;
                     } else {
-                        throw new Error("4 Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+/*------UNTESTED------*/throw new Error("4. Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
                     }
                     postfix.push(operatorStack.pop());
                 }
                 operatorStack.push(operator);
                 groupOperatorCounts[groupOperatorCounts.length-1]++;
             } else {
-            	if (!expectUnary) {
-                	throw new Error("Unexpected operand: " + token);
-                }
                 postfix.push(token);
-                if (groupCounts[groupCounts.length-1] == 0) {
-                	groupCounts[groupCounts.length-1]++; //only count the first operand/group added to a group, additional operands require commas
+                groupCounts[groupCounts.length-1]++;
+                while (groupOperatorCounts[groupOperatorCounts.length-1] > 0 &&
+                       !operatorStack[operatorStack.length-1].rightAssociative) {
+                    if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
+                        groupOperatorCounts[groupOperatorCounts.length-1]--;
+                    } else {
+                        throw new Error("Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
+                    }
+                    postfix.push(operatorStack.pop());
                 }
             }
             previousToken = operator ? operator : token;
         }
-        //alert(infix[infix.length-1] + " (" + (infix.length-1) + ") groupCounts: " + asString(groupCounts));
-        //alert(infix[infix.length-1] + " (" + (infix.length-1) + ") groupOperatorCounts: " + asString(groupOperatorCounts));
         while (operatorStack.length) {
             postfix.push(operatorStack.pop());
         }
         if (postfix.includes("(")) {
-            throw new Error("Mismatched grouping operator: (")
+            throw new Error("Mismatched grouping operator: (");
         }
         if (postfix.includes("[")) {
-            throw new Error("Mismatched grouping operator: [")
+            throw new Error("Mismatched grouping operator: [");
         }
         return postfix;
     }
@@ -281,18 +288,20 @@ class ShuntingYard {
         let groupLength = 0;
         let operands = [];
         for (let i = 0; i < postfix.length; i++) {
-            if (groupLength > 1 && 
-                (!(postfix[i] instanceof Operator) || typeof postfix[i].arity !== 'undefined')) {
-                let operandList = operands.slice(-groupLength);
-            	throw new Error("Missing function call for operands: " + asString(operandList).slice(1,-1));
+            if (groupLength === 0 && postfix[i] instanceof Operator && typeof postfix[i].arity === 'undefined') {
+                throw new Error("Unexpected function call: " + postfix[i].token);
             }
-            groupLength = 0;
+            if (groupLength > 1 && (!(postfix[i] instanceof Operator) || typeof postfix[i].arity !== 'undefined')) {
+                let operandList = operands.slice(-groupLength);
+                throw new Error("Missing function call for operands: " + asString(operandList).slice(1,-1));
+            }
             if (postfix[i] instanceof Operator) {
-            	let operator = postfix[i];
-            	if (operator.arity !== 0) {
+                let operator = postfix[i];
+                if (operator.arity !== 0) {
                     if (typeof operator.arity === 'undefined') {
                         let operandList = operands.splice(-groupLength);
                         operands.push(operator.operation(...operandList));
+                        groupLength = 0;
                     } else {
                         if (operands.length < operator.arity) {
                             throw new Error("Too few operands provided for operator: " + operator.token);
@@ -301,23 +310,32 @@ class ShuntingYard {
                         operands.push(operator.operation(...operandList));
                     }
                 } else {
-                	operands.push(operator.operation());
+                    operands.push(operator.operation());
                 }
             } else if (Object.prototype.toString.call(postfix[i]) === '[object String]' &&
-                       postfix[i].startsWith("(")) {
-            	let count = Number(postfix[i].slice(1, -1));
-                if (count > operands.length) {
-                	throw new Error("Mismatched grouping operator: ,");
+                       (postfix[i].startsWith("(") || postfix[i].startsWith("["))) {
+                let count = Number(postfix[i].slice(1, -1));
+                let groupOperandList = operands.splice(-count);
+                let operandList = [];
+                let previousOperand = null;
+                for (let j = 0; j < groupOperandList.length; j++) {
+                    if (groupOperandList[j] === "," && (previousOperand === null || j == groupOperandList.length-1)) {
+                        throw new Error("Mismatched grouping operator: ,");
+                    }
+                    if (groupOperandList[j] !== "," && previousOperand !== null && previousOperand !== ",") {
+                        throw new Error("Too few operators provided for operands: " + previousOperand + "," + groupOperandList[j]);
+                    }
+                    if (groupOperandList[j] !== ",") {
+                        operandList.push(groupOperandList[j]);
+                    }
+                    previousOperand = groupOperandList[j];
                 }
-                groupLength = count;
-            } else if (Object.prototype.toString.call(postfix[i]) === '[object String]' &&
-                       postfix[i].startsWith("[")) {
-            	let count = Number(postfix[i].slice(1, -1));
-                if (count > operands.length) {
-                	throw new Error("Mismatched grouping operator: ,");
+                if (postfix[i].startsWith("[")) {
+                    operands.push(operandList);
+                } else {
+                    groupLength = operandList.length;
+                    Array.prototype.push.apply(operands, operandList);
                 }
-                let operandList = operands.splice(-count);
-            	operands.push(operandList);
             } else {
                 operands.push(postfix[i]);
             }
@@ -330,13 +348,13 @@ class ShuntingYard {
             throw new Error("Too few operators provided for operands: " + asString(operands).slice(1,-1));
         }
         if (operands.length == 0) {
-        	return "";
+            return "";
         }
         return operands[0];
     }
-    
+
     static PI() {
-    	return 3.14;
+        return 3.14;
     }
 
     static unaryPlus(operand) {
@@ -353,26 +371,6 @@ class ShuntingYard {
         return ShuntingYard.multiply(-1, operand);
     }
 
-    static append() {
-        //[1,2,3] . 4 = [1,2,3,4]
-        //[1,2,3] . [4] = [1,2,3,4]
-        //[1,2,3] . [[4]] = [1,2,3,[4]]
-        //[1,2,3] . [4,5,6] = [1,2,3,4,5,6]
-        //[1,2,3] . [[4,5,6]] = [1,2,3,[4,5,6]]
-        let operand1 = arguments[0];
-        let operand2 = arguments[1];
-        let result = operand1.slice(0);
-        //TODO: handle operand1 that isn't an array
-        if (Array.isArray(operand2)) {
-            for (let i = 0; i < operand2.length; i++) {
-                result.push(operand2[i]);
-            }
-        } else {
-            result.push(operand2);
-        }
-        return result;
-    }
-
     static plus(augend, addend) {
         //[1,2,3] + 4 = [5,6,7]
         //[1,2,3] + [4] = ([1,2,3] + [4,0,0]) = [5,2,3]
@@ -383,6 +381,9 @@ class ShuntingYard {
         }
         if (Array.isArray(augend)) {
             return augend.map(value => ShuntingYard.plus(value, addend));
+        }
+        if (isNaN(Number(augend)) || isNaN(Number(addend))) {
+            throw new Error("Cannot add non-numeric values: " + asString(augend) + "," + asString(addend));
         }
         return augend + addend;
     }
@@ -398,6 +399,9 @@ class ShuntingYard {
         if (Array.isArray(minuend)) {
             return minuend.map(value => ShuntingYard.minus(value, subtrahend));
         }
+        if (isNaN(Number(minuend)) || isNaN(Number(subtrahend))) {
+            throw new Error("Cannot subtract non-numeric values: " + asString(minuend) + "," + asString(subtrahend));
+        }
         return minuend - subtrahend;
     }
 
@@ -408,6 +412,9 @@ class ShuntingYard {
         if (Array.isArray(multiplier)) {
             return multiplier.map(value => ShuntingYard.multiply(value, multiplicand));
         }
+        if (isNaN(Number(multiplier)) || isNaN(Number(multiplicand))) {
+            throw new Error("Cannot multiply non-numeric values: " + asString(multiplier) + "," + asString(multiplicand));
+        }
         return multiplier * multiplicand;
     }
 
@@ -417,6 +424,9 @@ class ShuntingYard {
         }
         if (Array.isArray(dividend)) {
             return dividend.map(value => ShuntingYard.divide(value, divisor));
+        }
+        if (isNaN(Number(dividend)) || isNaN(Number(divisor))) {
+            throw new Error("Cannot divide non-numeric values: " + asString(dividend) + "," + asString(multipldivisoricand));
         }
         return dividend / divisor;
     }
@@ -429,11 +439,14 @@ class ShuntingYard {
     }
 
     static factorial(operand) {
-    	if (typeof operand === 'undefined' || operand === null) {
-        	throw new Error("Factorial requires a parameter");
+        if (typeof operand === 'undefined' || operand === null) {
+            throw new Error("Factorial requires a parameter");
         }
         if (Array.isArray(operand)) {
             return operand.map(ShuntingYard.factorial);
+        }
+        if (isNaN(Number(operand))) {
+            throw new Error("Cannot calculate factorial for non-numeric operand: " + asString(operand));
         }
         if (operand < 0) {
             return undefined;
@@ -443,15 +456,15 @@ class ShuntingYard {
         }
         return ShuntingYard.multiply(operand, ShuntingYard.factorial(operand - 1));
     }
-    
+
     static sum(...summands) {
-    	let sum = 0;
+        let sum = 0;
         for (let i = 0; i < summands.length; i++) {
-        	sum = ShuntingYard.plus(sum, summands[i]);
+            sum = ShuntingYard.plus(sum, summands[i]);
         }
         return sum;
     }
-    
+
     static lt(operand1, operand2) {
         if (Array.isArray(operand2)) {
             return operand2.map(value => ShuntingYard.lt(operand1, value));
@@ -461,7 +474,7 @@ class ShuntingYard {
         }
         return operand1 < operand2;
     }
-    
+
     static lte(operand1, operand2) {
         if (Array.isArray(operand2)) {
             return operand2.map(value => ShuntingYard.lte(operand1, value));
@@ -471,7 +484,7 @@ class ShuntingYard {
         }
         return operand1 <= operand2;
     }
-    
+
     static gt(operand1, operand2) {
         if (Array.isArray(operand2)) {
             return operand2.map(value => ShuntingYard.gt(operand1, value));
@@ -481,7 +494,7 @@ class ShuntingYard {
         }
         return operand1 > operand2;
     }
-    
+
     static gte(operand1, operand2) {
         if (Array.isArray(operand2)) {
             return operand2.map(value => ShuntingYard.gte(operand1, value));
@@ -491,7 +504,7 @@ class ShuntingYard {
         }
         return operand1 >= operand2;
     }
-    
+
     static eq(operand1, operand2) {
         if (Array.isArray(operand2)) {
             return operand2.map(value => ShuntingYard.eq(operand1, value));
@@ -501,35 +514,35 @@ class ShuntingYard {
         }
         return operand1 == operand2;
     }
-    
+
     static unaryDiceRoll(sides) {
-    	return ShuntingYard.diceRoll(1,sides);
+        return ShuntingYard.diceRoll(1,sides);
     }
 
     static diceRoll(quantity, sides) {
         if (!Array.isArray(sides)) {
-        	if (isNaN(Number(sides))) {
-            	throw new Exception("Invalid sides for a dice roll: " + asString(sides));
+            if (isNaN(Number(sides))) {
+                throw new Error("Invalid sides for a dice roll: " + asString(sides));
             }
             sides = [...Array(sides).keys()].map(num => num + 1);
         }
         if (Array.isArray(quantity)) {
             return quantity.map(function(q) {
-            	return ShuntingYard.diceRoll(q, sides); 
+                return ShuntingYard.diceRoll(q, sides); 
             });
         }
         let roll = Math.floor(Math.random() * sides.length);
+        if (quantity === 1 && !Array.isArray(sides[roll]) && isNaN(sides[roll])) {
+            return sides[roll]; //skip multiplication if quantity is 1
+        }
         return ShuntingYard.multiply(quantity, sides[roll]);
     }
-    
+
     static arrayUnaryDiceRoll(sides) {
-    	return [ShuntingYard.unaryDiceRoll(sides)];
+        return [ShuntingYard.unaryDiceRoll(sides)];
     }
-    
+
     static arrayDiceRoll(quantity, sides) {
-        if (Array.isArray(sides)) {
-            return sides.map(value => ShuntingYard.arrayDiceRoll(quantity, value));
-        }
         if (Array.isArray(quantity)) {
             return quantity.map(value => ShuntingYard.arrayDiceRoll(value, sides));
         }
