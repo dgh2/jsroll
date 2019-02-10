@@ -242,28 +242,26 @@ class ShuntingYard {
                        !["(","[",","].includes(operatorStack[operatorStack.length-1]) &&
                        operatorStack[operatorStack.length-1] instanceof Operator &&
                        (operatorStack[operatorStack.length-1].precedence < operator.precedence ||
-                        (!operator.rightAssociative && operatorStack[operatorStack.length-1].precedence === operator.precedence))) {
+                        (!operatorStack[operatorStack.length-1].rightAssociative && operatorStack[operatorStack.length-1].precedence === operator.precedence))) {
                     if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
                         groupOperatorCounts[groupOperatorCounts.length-1]--;
+                        postfix.push(operatorStack.pop());
                     } else {
 /*------UNTESTED------*/throw new Error("4. Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
                     }
-                    postfix.push(operatorStack.pop());
                 }
                 operatorStack.push(operator);
                 groupOperatorCounts[groupOperatorCounts.length-1]++;
             } else {
+                if (!expectUnary) {
+                    //Unexpected operand received, pop off operators
+                    while (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
+                        postfix.push(operatorStack.pop());
+                        groupOperatorCounts[groupOperatorCounts.length-1]--;
+                    }
+                }
                 postfix.push(token);
                 groupCounts[groupCounts.length-1]++;
-                while (groupOperatorCounts[groupOperatorCounts.length-1] > 0 &&
-                       !operatorStack[operatorStack.length-1].rightAssociative) {
-                    if (groupOperatorCounts[groupOperatorCounts.length-1] > 0) {
-                        groupOperatorCounts[groupOperatorCounts.length-1]--;
-                    } else {
-                        throw new Error("Too few operands provided for operator: " + operatorStack[operatorStack.length-1]);
-                    }
-                    postfix.push(operatorStack.pop());
-                }
             }
             previousToken = operator ? operator : token;
         }
