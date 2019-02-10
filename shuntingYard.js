@@ -85,20 +85,23 @@ class ShuntingYard {
         operators.push(Operator.createConstant("PI", ShuntingYard.PI));
         operators.push(Operator.createUnaryPrefixOperator("!", ShuntingYard.booleanNegate));
         operators.push(Operator.createUnaryPostfixOperator("!", ShuntingYard.factorial));
-        operators.push(Operator.createUnaryPostfixOperator("%", ShuntingYard.percent));
         operators.push(Operator.createFunctionOperator("MAX", Math.max));
         operators.push(Operator.createFunctionOperator("MIN", Math.min));
         operators.push(Operator.createFunctionOperator("SUM", ShuntingYard.sum));
-        operators.push(Operator.createBinaryOperator("<", 3, ShuntingYard.lt));
-        operators.push(Operator.createBinaryOperator("<=", 3, ShuntingYard.lte));
-        operators.push(Operator.createBinaryOperator(">", 3, ShuntingYard.gt));
-        operators.push(Operator.createBinaryOperator(">=", 3, ShuntingYard.gte));
-        operators.push(Operator.createBinaryOperator("=", 3, ShuntingYard.eq));
-        operators.push(Operator.createBinaryOperator("==", 3, ShuntingYard.eq));
-        operators.push(Operator.createUnaryPrefixOperator("d", ShuntingYard.unaryDiceRoll, true));
+        operators.push(Operator.createBinaryOperator("<", 5, ShuntingYard.lt));
+        operators.push(Operator.createBinaryOperator("<=", 5, ShuntingYard.lte));
+        operators.push(Operator.createBinaryOperator(">", 5, ShuntingYard.gt));
+        operators.push(Operator.createBinaryOperator(">=",5, ShuntingYard.gte));
+        operators.push(Operator.createBinaryOperator("=", 5, ShuntingYard.eq));
+        operators.push(Operator.createBinaryOperator("==", 5, ShuntingYard.eq));
+        operators.push(Operator.createUnaryPrefixOperator("d", ShuntingYard.unaryDiceRoll));
         operators.push(Operator.createBinaryOperator("d", 2, ShuntingYard.diceRoll, true));
-        operators.push(Operator.createUnaryPrefixOperator("[d]", ShuntingYard.arrayUnaryDiceRoll, true));
+        operators.push(Operator.createUnaryPrefixOperator("[d]", ShuntingYard.arrayUnaryDiceRoll));
         operators.push(Operator.createBinaryOperator("[d]", 2, ShuntingYard.arrayDiceRoll, true));
+        operators.push(Operator.createBinaryOperator("^", 2, ShuntingYard.power, true));
+        operators.push(Operator.createBinaryOperator("**", 2, ShuntingYard.power, true));
+        operators.push(Operator.createBinaryOperator("%", 3, ShuntingYard.mod));
+        //TODO: df, d%
 
         //test operations
         operators.push(Operator.createFunctionOperator("Σ", ShuntingYard.sum));
@@ -424,9 +427,35 @@ class ShuntingYard {
             return dividend.map(value => ShuntingYard.divide(value, divisor));
         }
         if (isNaN(Number(dividend)) || isNaN(Number(divisor))) {
-            throw new Error("Cannot divide non-numeric values: " + asString(dividend) + "," + asString(multipldivisoricand));
+            throw new Error("Cannot divide non-numeric values: " + asString(dividend) + "," + asString(divisor));
         }
         return dividend / divisor;
+    }
+
+    static power(base, exponent) {
+        if (Array.isArray(exponent)) {
+            return exponent.map(value => ShuntingYard.power(base, value));
+        }
+        if (Array.isArray(base)) {
+            return base.map(value => ShuntingYard.power(value, exponent));
+        }
+        if (isNaN(Number(base)) || isNaN(Number(exponent))) {
+            throw new Error("Cannot calculate the exponent of non-numeric values: " + asString(base) + "," + asString(exponent));
+        }
+        return base ** exponent;
+    }
+
+    static mod(dividend, divisor) {
+        if (Array.isArray(divisor)) {
+            return divisor.map(value => ShuntingYard.mod(dividend, value));
+        }
+        if (Array.isArray(dividend)) {
+            return dividend.map(value => ShuntingYard.mod(value, divisor));
+        }
+        if (isNaN(Number(dividend)) || isNaN(Number(divisor))) {
+            throw new Error("Cannot calculate the modulus of non-numeric values: " + asString(dividend) + "," + asString(divisor));
+        }
+        return dividend % divisor;
     }
 
     static booleanNegate(operand) {
