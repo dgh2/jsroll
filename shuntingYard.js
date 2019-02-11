@@ -101,7 +101,12 @@ class ShuntingYard {
         operators.push(Operator.createBinaryOperator("^", 2, ShuntingYard.power, true));
         operators.push(Operator.createBinaryOperator("**", 2, ShuntingYard.power, true));
         operators.push(Operator.createBinaryOperator("%", 3, ShuntingYard.mod));
-        //TODO: df, d%
+        operators.push(Operator.createUnaryPrefixOperator("df", ShuntingYard.fudgeDiceRoll));
+        operators.push(Operator.createUnaryPrefixOperator("dF", ShuntingYard.fudgeDiceRoll));
+        operators.push(Operator.createUnaryPrefixOperator("d%", ShuntingYard.percentileDiceRoll));
+        operators.push(Operator.createUnaryPrefixOperator("[d]f", ShuntingYard.arrayFudgeDiceRoll));
+        operators.push(Operator.createUnaryPrefixOperator("[d]F", ShuntingYard.arrayFudgeDiceRoll));
+        operators.push(Operator.createUnaryPrefixOperator("[d]%", ShuntingYard.arrayPercentileDiceRoll));
 
         //test operations
         operators.push(Operator.createFunctionOperator("Σ", ShuntingYard.sum));
@@ -577,6 +582,22 @@ class ShuntingYard {
             return quantity.map(value => ShuntingYard.arrayDiceRoll(value, sides));
         }
         return ShuntingYard.diceRoll(Array(quantity).fill(1), sides);
+    }
+    
+    static fudgeDiceRoll(quantity) {
+    	return ShuntingYard.diceRoll(quantity, [-1,0,1]);
+    }
+    
+    static arrayFudgeDiceRoll(quantity) {
+    	return ShuntingYard.arrayDiceRoll(quantity, [-1,0,1]);
+    }
+    
+    static percentileDiceRoll(quantity) {
+    	return ShuntingYard.diceRoll(quantity, 100);
+    }
+    
+    static arrayPercentileDiceRoll(quantity) {
+    	return ShuntingYard.arrayDiceRoll(quantity, 100);
     }
     
     static magic8ball() {
