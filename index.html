@@ -37,6 +37,8 @@
                         let tokens;
                         let postfix;
                         let result;
+                        resultContainer.appendChild(document.createTextNode("Input: " + cmd));
+                        resultContainer.appendChild(document.createElement("br"));
                         try {
                             tokens = parser.tokenize(cmd);
                             resultContainer.appendChild(document.createTextNode("Tokens: " + asString(tokens).slice(1,-1)));
