@@ -26,14 +26,14 @@ class Operator {
         if (!o1.hasOwnProperty("precedence") || !o2.hasOwnProperty("precedence")) {
             throw new TypeError('Cannot compare without precedences.');
         }
-        return o1.precedence - o2.precedence;
+        return o1.precedence - o2.precedence; //sort by ascending precedence (o1-o2)
     }
 
     static compareLength(o1, o2) {
         if (!o1.hasOwnProperty("token") || !o2.hasOwnProperty("token")) {
             throw new TypeError('Cannot compare without tokens.');
         }
-        return o2.token.length - o1.token.length;
+        return o2.token.length - o1.token.length; //sort by decending length (o2-o1)
     }
 
     static createConstant(token, operation) { //example: PI = 3.14
@@ -101,12 +101,18 @@ class ShuntingYard {
         operators.push(Operator.createBinaryOperator("^", 2, ShuntingYard.power, true));
         operators.push(Operator.createBinaryOperator("**", 2, ShuntingYard.power, true));
         operators.push(Operator.createBinaryOperator("%", 3, ShuntingYard.mod));
-        operators.push(Operator.createUnaryPrefixOperator("df", ShuntingYard.fudgeDiceRoll));
-        operators.push(Operator.createUnaryPrefixOperator("dF", ShuntingYard.fudgeDiceRoll));
-        operators.push(Operator.createUnaryPrefixOperator("d%", ShuntingYard.percentileDiceRoll));
-        operators.push(Operator.createUnaryPrefixOperator("[d]f", ShuntingYard.arrayFudgeDiceRoll));
-        operators.push(Operator.createUnaryPrefixOperator("[d]F", ShuntingYard.arrayFudgeDiceRoll));
-        operators.push(Operator.createUnaryPrefixOperator("[d]%", ShuntingYard.arrayPercentileDiceRoll));
+        operators.push(Operator.createConstant("df", ShuntingYard.unaryFudgeDiceRoll));
+        operators.push(Operator.createUnaryPostfixOperator("df", ShuntingYard.fudgeDiceRoll));
+        operators.push(Operator.createConstant("dF", ShuntingYard.unaryFudgeDiceRoll));
+        operators.push(Operator.createUnaryPostfixOperator("dF", ShuntingYard.fudgeDiceRoll));
+        operators.push(Operator.createConstant("[d]f", ShuntingYard.arrayUnaryFudgeDiceRoll));
+        operators.push(Operator.createUnaryPostfixOperator("[d]f", ShuntingYard.arrayFudgeDiceRoll));
+        operators.push(Operator.createConstant("[d]F", ShuntingYard.arrayUnaryFudgeDiceRoll));
+        operators.push(Operator.createUnaryPostfixOperator("[d]F", ShuntingYard.arrayFudgeDiceRoll));
+        operators.push(Operator.createConstant("d%", ShuntingYard.unaryPercentileDiceRoll));
+        operators.push(Operator.createUnaryPostfixOperator("d%", ShuntingYard.percentileDiceRoll));
+        operators.push(Operator.createConstant("[d]%", ShuntingYard.arrayUnaryPercentileDiceRoll));
+        operators.push(Operator.createUnaryPostfixOperator("[d]%", ShuntingYard.arrayPercentileDiceRoll));
 
         //test operations
         operators.push(Operator.createFunctionOperator("Σ", ShuntingYard.sum));
@@ -157,11 +163,18 @@ class ShuntingYard {
         let operators = this.operators.filter(op => op.token === token);
         if (operators.length > 1) {
             if (isUnary) {
+                //find constant or unary prefix operator
                 operators = operators.filter(op => typeof op.fix === 'undefined' || 
                                              (op.fix === Operator.prefix && op.arity === 1));
             } else {
-                operators = operators.filter(op => typeof op.fix === 'undefined' || 
+                //find any operator except constant or unary prefix
+                operators = operators.filter(op => typeof op.fix !== 'undefined' && 
                                              !(op.fix === Operator.prefix && op.arity === 1));
+                if (operators.length === 0) {
+                    //find constant operator if no operators with arity were found
+                    operators = operators.filter(op => op.fix === 'undefined' && 
+                                                 !(op.fix === Operator.prefix && op.arity === 1));
+                }
             }
             if (operators.length === 0) {
                 throw new Error("Unexpected operator: " + token); //token is operator, but used incorrectly
@@ -189,7 +202,7 @@ class ShuntingYard {
         let previousToken = null;
         for (let i = 0; i < infix.length; i++) {
             const token = infix[i];
-            const expectUnary = unaryPrefixes.includes(i === 0 ? null : previousToken);
+            const expectUnary = unaryPrefixes.includes(previousToken);
             const operator = this.getOperator(token, expectUnary);
             if (["(","["].includes(token)) {
                 if (!expectUnary) {
@@ -551,7 +564,7 @@ class ShuntingYard {
     }
 
     static unaryDiceRoll(sides) {
-        return ShuntingYard.diceRoll(1,sides);
+        return ShuntingYard.diceRoll(1, sides);
     }
 
     static diceRoll(quantity, sides) {
@@ -592,12 +605,28 @@ class ShuntingYard {
     	return ShuntingYard.arrayDiceRoll(quantity, [-1,0,1]);
     }
     
+    static unaryFudgeDiceRoll() {
+    	return ShuntingYard.diceRoll(1, [-1,0,1]);
+    }
+    
+    static arrayUnaryFudgeDiceRoll() {
+    	return ShuntingYard.arrayDiceRoll(1, [-1,0,1]);
+    }
+    
     static percentileDiceRoll(quantity) {
     	return ShuntingYard.diceRoll(quantity, 100);
     }
     
     static arrayPercentileDiceRoll(quantity) {
     	return ShuntingYard.arrayDiceRoll(quantity, 100);
+    }
+    
+    static unaryPercentileDiceRoll() {
+    	return ShuntingYard.diceRoll(1, 100);
+    }
+    
+    static arrayUnaryPercentileDiceRoll() {
+    	return ShuntingYard.arrayDiceRoll(1, 100);
     }
     
     static magic8ball() {
