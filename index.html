@@ -33,30 +33,33 @@
                 let resultContainer = document.getElementById("result");
                 if (resultContainer) {
                     let cmd = getParameter("roll");
+                    let debug = ["true","TRUE","t","T"].includes(getParameter("debug"));
                     if (cmd) {
                         let parser = new ShuntingYard();
                         let tokens;
                         let postfix;
                         let result;
-                        resultContainer.appendChild(document.createTextNode("Input: " + cmd));
-                        resultContainer.appendChild(document.createElement("br"));
                         try {
+                            if (debug) {
+                                resultContainer.appendChild(document.createTextNode("Input: " + cmd));
+                                resultContainer.appendChild(document.createElement("br"));
+                            }
+                            
                             tokens = parser.tokenize(cmd);
-                            resultContainer.appendChild(document.createTextNode("Tokens: " + asString(tokens).slice(1,-1)));
-                        } catch (err) {
-                            resultContainer.appendChild(document.createTextNode(err.message));
-                        }
-                        resultContainer.appendChild(document.createElement("br"));
-                        try {
+                            if (debug) {
+                                resultContainer.appendChild(document.createTextNode("Tokens: " + asString(tokens).slice(1,-1)));
+                                resultContainer.appendChild(document.createElement("br"));
+                            }
+                            
                             postfix = parser.infixToPostfix(tokens);
-                            resultContainer.appendChild(document.createTextNode("Postfix: " + asString(postfix).slice(1,-1)));
-                        } catch (err) {
-                            resultContainer.appendChild(document.createTextNode(err.message));
-                        }
-                        resultContainer.appendChild(document.createElement("br"));
-                        try {
+                            if (debug) {
+                                resultContainer.appendChild(document.createTextNode("Postfix: " + asString(postfix).slice(1,-1)));
+                                resultContainer.appendChild(document.createElement("br"));
+                            }
+                            
                             result = parser.evaluate(postfix);
                             resultContainer.appendChild(document.createTextNode("Result: " + asString(result)));
+                            
                         } catch (err) {
                             resultContainer.appendChild(document.createTextNode(err.message));
                         }
