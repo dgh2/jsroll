@@ -579,7 +579,7 @@ class ShuntingYard {
     }
     
     static magic8ball() {
-        return unaryDiceRoll(
+        return ShuntingYard.unaryDiceRoll(
             ["It is certain.",
              "It is decidedly so.",
              "Without a doubt.",
