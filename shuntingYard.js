@@ -289,10 +289,10 @@ class ShuntingYard {
         } else if (postfix.length === 0) {
             return "";
         }
-        let groupLength = 0;
+        let groupLength = null;
         let operands = [];
         for (let i = 0; i < postfix.length; i++) {
-            if (groupLength === 0 && postfix[i] instanceof Operator && typeof postfix[i].arity === 'undefined') {
+            if (groupLength === null && postfix[i] instanceof Operator && typeof postfix[i].arity === 'undefined') {
                 throw new Error("Unexpected function call: " + postfix[i].token);
             }
             if (groupLength > 1 && (!(postfix[i] instanceof Operator) || typeof postfix[i].arity !== 'undefined')) {
@@ -305,7 +305,7 @@ class ShuntingYard {
                     if (typeof operator.arity === 'undefined') {
                         let operandList = operands.splice(-groupLength);
                         operands.push(operator.operation(...operandList));
-                        groupLength = 0;
+                        groupLength = null;
                     } else {
                         if (operands.length < operator.arity) {
                             throw new Error("Too few operands provided for operator: " + operator.token);
