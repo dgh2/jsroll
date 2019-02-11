@@ -107,6 +107,7 @@ class ShuntingYard {
         operators.push(Operator.createFunctionOperator("Σ", ShuntingYard.sum));
         operators.push(Operator.createBinaryOperator("ErroneousOperator", 2, undefined));
         operators.push(Operator.createUnaryPostfixOperator("ErroneousOperator", undefined));
+        operators.push(Operator.createConstant("➑", ShuntingYard.magic8ball));
         operators.push(Operator.createConstant("🎱", ShuntingYard.magic8ball));
         operators.push(Operator.createFunctionOperator("Magic8Ball", ShuntingYard.magic8ball));
 
@@ -579,7 +580,7 @@ class ShuntingYard {
     }
     
     static magic8ball() {
-        return ShuntingYard.unaryDiceRoll(
+        return "\"" + ShuntingYard.unaryDiceRoll(
             ["It is certain.",
              "It is decidedly so.",
              "Without a doubt.",
@@ -600,6 +601,6 @@ class ShuntingYard {
              "My sources say no.",
              "Outlook not so good.",
              "Very doubtful."]
-        );
+        ) + "\"";
     }
 }
