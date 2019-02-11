@@ -1,0 +1,17 @@
+html, body {
+  min-height: 100%;
+}
+
+#content {
+  padding-bottom: 1em;
+}
+
+#footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  white-space: nowrap;
+  background: inherit;
+}
