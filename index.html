@@ -39,14 +39,14 @@
                         let result;
                         try {
                             tokens = parser.tokenize(cmd);
-                            resultContainer.appendChild(document.createTextNode("Tokens: " + asString(tokens)));
+                            resultContainer.appendChild(document.createTextNode("Tokens: " + asString(tokens).slice(1,-1)));
                         } catch (err) {
                             resultContainer.appendChild(document.createTextNode(err.message));
                         }
                         resultContainer.appendChild(document.createElement("br"));
                         try {
                             postfix = parser.infixToPostfix(tokens);
-                            resultContainer.appendChild(document.createTextNode("Postfix: " + asString(postfix)));
+                            resultContainer.appendChild(document.createTextNode("Postfix: " + asString(postfix).slice(1,-1)));
                         } catch (err) {
                             resultContainer.appendChild(document.createTextNode(err.message));
                         }
